@@ -28,6 +28,8 @@ This app allows you to upload your data, generate insightful charts, and interac
 df = load_csv()
 
 if df is not None:
+    st.subheader("📂 Uploaded Data Preview")
+    st.dataframe(df.head(10))
     # Generate chart and metadata
     chart_metadata = generate_chart(df)
 
