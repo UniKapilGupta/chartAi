@@ -3,8 +3,15 @@ import plotly.express as px
 import pandas as pd
 
 def generate_chart(df: pd.DataFrame):
+    # Use the cleaned DataFrame from session state if available
+    if st.session_state["data_cleaned"]==True:
+        # df = st.session_state["cleaned_df"]
+        df = st.session_state.get("cleaned_df")
+    print("here is my current data")
+    print(df)
     st.subheader("Chart Configuration")
-
+    import pdb
+    # pdb.set_trace()
     chart_type = st.selectbox(
         "Chart Type",
         ["Line", "Bar", "Scatter", "Histogram", "Box", "Violin", "Distribution"]

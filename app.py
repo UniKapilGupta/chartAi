@@ -1,37 +1,74 @@
 import streamlit as st
 from components.data_loader import load_csv
+from components.data_cleaner import summarize_missing_values, handle_missing_values, delete_columns
 from components.chart_generator import generate_chart
 from components.chat_window import chat_window
 
 st.set_page_config(page_title="Chart App", layout="wide")
 st.title("📊 Interactive Chart Generator")
 
-# Add an introduction and steps to use the app
-st.markdown("""
-### Welcome to the Interactive Chart Generator!
-This app allows you to upload your data, generate insightful charts, and interact with an AI assistant to analyze your data.
+# --- Initialize session state ---
+if "raw_df" not in st.session_state:
+    st.session_state["raw_df"] = None
+if "cleaned_df" not in st.session_state:
+    st.session_state["cleaned_df"] = None
+if "data_cleaned" not in st.session_state:
+    st.session_state["data_cleaned"] = False
 
-#### How to Use:
-1. **Upload Your Data**: Start by uploading a CSV file containing your dataset.
-2. **Generate a Chart**: Select the columns, chart type, and other options to create a chart.
-3. **Interact with AI**: Use the chat window on the left sidebar to ask questions about the chart.
+# --- Add session reload option ---
+with st.sidebar:
+    if st.button("🔄 Restart Session"):
+        for key in st.session_state.keys():
+            del st.session_state[key]
+        st.rerun()  # Updated from st.experimental_rerun() to st.rerun()
 
-#### Features:
-- Supports multiple chart types.
-- Provides AI-powered insights based on your data.
-- Easy-to-use interface for data exploration.
+# --- Load Data ---
+if st.session_state.get("raw_df") is None:
+    uploaded_df = load_csv()
+    if uploaded_df is not None:
+        st.session_state["raw_df"] = uploaded_df
+else:
+    uploaded_df = st.session_state["raw_df"]
 
----
-""")
-
-# Load dataset
-df = load_csv()
-
-if df is not None:
+# --- Proceed if data is loaded ---
+if uploaded_df is not None:
     st.subheader("📂 Uploaded Data Preview")
-    st.dataframe(df.head(10))
-    # Generate chart and metadata
-    chart_metadata = generate_chart(df)
+    st.dataframe(uploaded_df.head(10))
+
+    # --- Data Cleaning Section ---
+    st.subheader("🧹 Data Cleaning")
+
+    df = (
+        st.session_state["cleaned_df"]
+        if st.session_state["data_cleaned"]
+        else uploaded_df.copy()
+    )
+
+    st.markdown("### Missing Value Summary")
+    st.dataframe(summarize_missing_values(df))
+
+    df = handle_missing_values(df)
+    df = delete_columns(df)
+
+    # Save cleaned data only if changes were made
+    if st.session_state["data_cleaned"]:
+        st.session_state["cleaned_df"] = df
+
+    st.subheader("📂 Cleaned Data Preview")
+    st.dataframe(
+        st.session_state["cleaned_df"]
+        if st.session_state["data_cleaned"]
+        else uploaded_df.head(10)
+    )
+
+    # --- Generate Chart ---
+    st.subheader("📈 Chart Generator")
+    chart_df = (
+        st.session_state["cleaned_df"]
+        if st.session_state["data_cleaned"]
+        else uploaded_df
+    )
+    chart_metadata = generate_chart(chart_df)
 
     # Extract metadata for chat
     chart_type = chart_metadata.get("chart_type")
@@ -39,14 +76,10 @@ if df is not None:
     group_col = chart_metadata.get("group_col")
     filters = chart_metadata.get("filters")
 
-    # Show chart in main area
-    st.subheader("📈 Generated Chart")
-    # TODO: render chart here (replace with your logic)
-
-    # Chat window goes in sidebar
+    # Sidebar chat window
     with st.sidebar:
         st.header("💬 AI Assistant")
-        chat_window(df, chart_type, selected_cols, group_col, filters)
+        chat_window(chart_df, chart_type, selected_cols, group_col, filters)
 
 else:
     st.info("⬆️ Please upload a dataset to get started.")
