@@ -2,7 +2,7 @@ import streamlit as st
 from components.data_loader import load_csv
 from components.data_cleaner import summarize_missing_values, handle_missing_values, delete_columns
 from components.chart_generator import generate_chart
-from components.chat_window import chart_generation_chat, chart_query_chat
+from components.chat_window import chat_window
 
 st.set_page_config(page_title="Chart App", layout="wide")
 
@@ -88,12 +88,9 @@ with tab2:
 # ---------------------------
 # 📈 Chart & Query Tab
 # ---------------------------
-# ---------------------------
-# 📈 Chart & Query Tab
-# ---------------------------
 with tab3:
     if st.session_state.get("raw_df") is not None:
-        st.header("📊 Chart Builder & AI Assistant")
+        st.header("📈 Chart Generator")
 
         chart_df = (
             st.session_state["cleaned_df"]
@@ -101,59 +98,24 @@ with tab3:
             else st.session_state["raw_df"]
         )
 
-        # --- Create Two Sub-Tabs ---
-        manual_tab, ai_tab = st.tabs(["🛠️ Manual Chart Builder", "🤖 AI Chart Generator"])
+        chart_metadata = generate_chart(chart_df)
 
-        # -------------------------------------------------------
-        # 🛠️ Manual Chart Builder Tab (your existing setup)
-        # -------------------------------------------------------
-        with manual_tab:
-            st.subheader("🛠️ Manual Chart Builder")
+        # Extract metadata for chat
+        chart_type = chart_metadata.get("chart_type")
+        selected_cols = chart_metadata.get("selected_cols")
+        group_col = chart_metadata.get("group_col")
+        filters = chart_metadata.get("filters")
 
-            # Let user select columns and create chart manually
-            chart_metadata = generate_chart(chart_df)
+        # --- Two-column layout for chart and chat ---
+        chart_col, chat_col = st.columns([0.65, 0.35])
 
-            chart_type = chart_metadata.get("chart_type")
-            selected_cols = chart_metadata.get("selected_cols")
-            group_col = chart_metadata.get("group_col")
-            filters = chart_metadata.get("filters")
+        with chart_col:
+            st.subheader("📊 Chart View")
+            st.info("Your generated chart will appear here based on selections.")
+            # The generate_chart() likely already plots inside itself
 
-            # --- Split layout for chart & chat ---
-            chart_col, chat_col = st.columns([0.65, 0.35])
-
-            # with chart_col:
-            #     st.subheader("📈 Chart Preview")
-            #     if chart_type and selected_cols:
-            #         # Plot the chart manually selected by user
-            #         generate_chart(chart_df, **chart_metadata)
-            #     else:
-            #         st.info("Please select columns and chart type to generate visualization.")
-
-            with chat_col:
-                # st.subheader("💬 Chart Query Assistant")
-                # This chat answers analytical questions about current chart
-                chart_query_chat(
-                    chart_df,
-                    chart_type=chart_type,
-                    selected_cols=selected_cols,
-                    group_col=group_col,
-                    filters=filters
-                )
-
-        # -------------------------------------------------------
-        # 🤖 AI Chart Generator Tab (new — LLM-driven)
-        # -------------------------------------------------------
-        with ai_tab:
-            # st.subheader("🤖 AI Chart Generator")
-
-            # User can directly describe a chart in natural language
-            chart_generation_chat(
-                chart_df,
-                chart_type=None,
-                selected_cols=None,
-                group_col=None,
-                filters=None
-            )
-
+        with chat_col:
+            st.subheader("💬 AI Assistant")
+            chat_window(chart_df, chart_type, selected_cols, group_col, filters)
     else:
-        st.warning("⚠️ Please upload and clean your dataset before generating charts.")
+        st.warning("Please upload and clean your dataset before generating charts.")
