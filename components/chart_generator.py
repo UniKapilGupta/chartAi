@@ -67,7 +67,7 @@ def generate_chart(
         if group_col and group_col != "None" and selected_cols and agg:
             df = df.groupby(group_col)[selected_cols].agg(agg).reset_index()
 
-        title = f"{chart_type} Chart"
+        title = f"{chart_type} Chart(AI Generated)"
         x_label = "Index"
         y_label = ", ".join(selected_cols) if selected_cols else ""
 
